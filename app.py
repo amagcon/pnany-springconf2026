@@ -206,7 +206,7 @@ with st.form("info"):
 
     with c2:
         email = st.text_input("Email Address *")
-        pnany_member = st.radio("PNANY Member Status", ["Active Member", "Student", "Retiree", "Nn-membero"], horizontal=True)
+        pnany_member = st.radio("PNANY Member Status", ["Active Member", "Student", "Retiree", "Non-member"], horizontal=True)
         pnaa_member = st.radio("PNAA Member", ["Yes", "No"], horizontal=True)
 
         pnaa_chapter = ""
@@ -357,23 +357,20 @@ if st.session_state.get("participant_ok"):
     topics_interest = st.text_area("What topics of interest would you like us to provide?")
     additional_comments = st.text_area("Additional Comments")
 
+    ###
+    
     if st.button("Submit Evaluation & Generate Certificate"):
         if any(answers[str(i)] is None for i in range(1, len(QUIZ) + 1)):
             st.error("Please answer all post-test questions.")
             st.stop()
-
+    
         correct = sum(1 for i, q in enumerate(QUIZ, start=1) if answers[str(i)] == q["answer"])
         total = len(QUIZ)
         score_pct = 100 * correct / total
         passed = score_pct >= PASSING_SCORE
-
-        if passed:
-            st.success(f"Your score: {correct}/{total} ({score_pct:.0f}%). You passed.")
-        else:
-            st.error(f"❗ You did not meet the passing score.\n\nYour score: {correct}/{total} ({score_pct:.0f}%). Minimum required: {PASSING_SCORE}%.")
-
+    
         cert_id = str(uuid.uuid4())
-
+    
         row = {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "conference_title": COURSE_TITLE,
@@ -388,19 +385,19 @@ if st.session_state.get("participant_ok"):
             "pnaa_chapter": pnaa_chapter,
             "first_time_attending": first_time_attending,
             "attendance_confirmed": "Yes" if attendance else "No",
-
+    
             "overall_well_organized": overall_well_organized,
             "overall_consistent_with_flyer": overall_consistent,
             "overall_relevant_to_learning_outcomes": overall_relevant,
             "overall_effective_virtual_methods": overall_virtual,
             "overall_met_personal_objectives": overall_objectives,
-
+    
             "improve_knowledge": "Yes" if improve_knowledge else "No",
             "improve_skills": "Yes" if improve_skills else "No",
             "improve_competence": "Yes" if improve_competence else "No",
             "improve_performance": "Yes" if improve_performance else "No",
             "improve_patient_outcomes": "Yes" if improve_patient_outcomes else "No",
-
+    
             "practice_change_selected": "; ".join(selected_practice_changes),
             "practice_change_other": practice_change_other,
             "fair_balanced": fair_balanced,
@@ -410,32 +407,25 @@ if st.session_state.get("participant_ok"):
             "most_beneficial_topic": most_beneficial_topic,
             "topics_interest": topics_interest,
             "additional_comments": additional_comments,
-
+    
             "quiz_score": correct,
             "quiz_total": total,
             "quiz_pct": f"{score_pct:.0f}",
             "quiz_passed": "Yes" if passed else "No",
             "cert_id": cert_id,
         }
-
+    
         for idx, speaker in enumerate(speakers, start=1):
             row[f"speaker_{idx}_name"] = speaker
             row[f"speaker_{idx}_effectiveness"] = speaker_ratings[f"speaker_{idx}_effectiveness"]
             row[f"speaker_{idx}_expertise"] = speaker_ratings[f"speaker_{idx}_expertise"]
             row[f"speaker_{idx}_teaching_methods"] = speaker_ratings[f"speaker_{idx}_teaching_methods"]
-
+    
         for i, q in enumerate(QUIZ, start=1):
             row[f"post_test_q{i}"] = answers[str(i)]
-
+    
         save_row_to_csv(SAVE_DIR / "submissions.csv", row)
-
-        try:
-            save_eval_to_sheets(row)
-            st.success("Saved to Google Sheets.")
-        except Exception:
-            st.error("Could not save to Google Sheets.")
-            st.code(traceback.format_exc())
-        
+    
         if not passed:
             st.error(
                 f"❗ You did not meet the passing score.\n\n"
@@ -445,14 +435,21 @@ if st.session_state.get("participant_ok"):
                 f"Certificate is only generated for participants who achieve the passing score."
             )
             st.stop()
-
+    
+        try:
+            save_eval_to_sheets(row)
+            st.success("Saved to Google Sheets.")
+        except Exception:
+            st.error("Could not save to Google Sheets.")
+            st.code(traceback.format_exc())
+    
         try:
             pdf_bytes = make_certificate_pdf(full_name, email, score_pct, cert_id)
         except Exception:
             st.error("Could not generate certificate PDF.")
             st.code(traceback.format_exc())
             st.stop()
-
+    
         cert_row = {
             "cert_id": cert_id,
             "name": full_name,
@@ -462,13 +459,13 @@ if st.session_state.get("participant_ok"):
             "credit_hours": CREDIT_HOURS,
             "score_pct": f"{score_pct:.0f}",
         }
-
+    
         try:
             save_cert_to_sheets(cert_row)
         except Exception:
             st.error("Could not log certificate to Google Sheets.")
             st.code(traceback.format_exc())
-
+    
         st.success("Congratulations! Your certificate is ready.")
         st.download_button(
             "Download Certificate (PDF)",
