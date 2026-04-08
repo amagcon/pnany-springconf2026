@@ -437,7 +437,7 @@ if st.session_state.get("participant_ok"):
             st.code(traceback.format_exc())
 
         if not passed:
-            st.info("Certificate is only generated for participants who achieve the passing score.")
+            st.info("Please re-take the post-test until you get passing score. Certificate is only generated for participants who achieve the passing score.")
             st.stop()
 
         try:
