@@ -229,7 +229,7 @@ with st.form("info"):
     with c2:
         email = st.text_input("Email Address *")
         pnany_member = st.radio("PNANY Member", ["Yes", "No"], horizontal=True)
-        pnaa_national_officer = st.radio("PNAA National Officer", ["Yes", "No"], horizontal=True)
+        pnaa_national_member = st.radio("PNAA Member", ["Yes", "No"], horizontal=True)
         first_time_attending = st.radio(
             "Is this your first time attending a PNA-NY educational conference?",
             ["Yes", "No"],
