@@ -435,9 +435,15 @@ if st.session_state.get("participant_ok"):
         except Exception:
             st.error("Could not save to Google Sheets.")
             st.code(traceback.format_exc())
-
+        
         if not passed:
-            st.info(f"❗You did not meet the passing score.\n\nYour score: {correct}/{total} ({score_pct:.0f}%). Minimum required: {PASSING_SCORE}%. Please re-take the post-test until you get passing score. Certificate is only generated for participants who achieve the passing score.")
+            st.error(
+                f"❗ You did not meet the passing score.\n\n"
+                f"Your score: {correct}/{total} ({score_pct:.0f}%). "
+                f"Minimum required: {PASSING_SCORE}%. "
+                f"Please re-take the post-test until you get a passing score. "
+                f"Certificate is only generated for participants who achieve the passing score."
+            )
             st.stop()
 
         try:
