@@ -160,7 +160,7 @@ def make_certificate_pdf(full_name: str, email: str, score_pct: float, cert_id: 
         raise FileNotFoundError(f"Certificate background image not found: {bg_path}")
 
     name_x = width / 2
-    name_y = 300
+    name_y = 330
     max_name_width = 420
 
     font_name = "Helvetica-Bold"
