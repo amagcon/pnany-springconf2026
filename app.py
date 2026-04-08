@@ -146,64 +146,38 @@ def make_certificate_pdf(full_name: str, email: str, score_pct: float, cert_id: 
     width, height = letter
 
     bg_path = "assets/cert_bg.png"
+
     if os.path.exists(bg_path):
-        try:
-            c.drawImage(ImageReader(bg_path), 0, 0, width=width, height=height, preserveAspectRatio=True, anchor="c")
-        except Exception:
-            pass
+        c.drawImage(
+            ImageReader(bg_path),
+            0,
+            0,
+            width=width,
+            height=height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+    else:
+        raise FileNotFoundError("Certificate background image not found at assets/cert_bg.png")
 
-    c.setStrokeColor(colors.black)
-    c.setLineWidth(1)
-    c.rect(36, 70, width - 72, height - 130)
+    name_x = width / 2
+    name_y = 535
+    max_name_width = 400
 
-    c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width / 2, 740, "The Philippine Nurses Association")
-    c.drawCentredString(width / 2, 723, "of America Foundation")
-    c.setFont("Helvetica", 9)
-    c.drawCentredString(width / 2, 706, "1346 How Lane, Suites 109-110, North Brunswick, NJ, 08902")
+    font_name = "Helvetica-Bold"
+    font_size = 24
 
-    c.setFont("Helvetica-Bold", 24)
-    c.drawCentredString(width / 2, 635, "Certificate of Completion")
+    while stringWidth(full_name, font_name, font_size) > max_name_width and font_size > 14:
+        font_size -= 1
 
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width / 2, 575, "This certifies that")
-
-    c.setFont("Helvetica-Bold", 22)
-    c.drawCentredString(width / 2, 535, full_name)
-
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width / 2, 495, "has attended and successfully completed the")
-
-    y = wrap_centered(
-        c,
-        COURSE_TITLE,
-        455,
-        font_name="Helvetica-Bold",
-        font_size=15,
-        max_width=450,
-        line_gap=20,
-    )
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width / 2, y - 10, COURSE_DATE)
-
-    c.line(220, 240, 392, 240)
-    c.setFont("Helvetica", 12)
-    c.drawCentredString(width / 2, 225, PROGRAM_DIRECTOR)
-    c.setFont("Helvetica", 11)
-    c.drawCentredString(width / 2, 208, PROGRAM_DIRECTOR_TITLE)
-
-    wrap_centered(c, PROVIDER_LINE, 120, font_name="Helvetica", font_size=9, max_width=500, line_gap=12)
-
-    issued_on = datetime.now().strftime("%Y-%m-%d %H:%M")
-    c.setFont("Helvetica-Oblique", 8)
-    c.drawRightString(width - 45, 92, f"Certificate ID: {cert_id}")
-    c.drawRightString(width - 45, 80, f"Post-test score: {score_pct:.0f}%")
-    c.drawRightString(width - 45, 68, f"Issued on: {issued_on}")
+    c.setFillColor(colors.black)
+    c.setFont(font_name, font_size)
+    c.drawCentredString(name_x, name_y, full_name)
 
     c.showPage()
     c.save()
     return buffer.getvalue()
-
+    
 # =========================
 # UI
 # =========================
