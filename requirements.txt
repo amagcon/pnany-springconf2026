@@ -1,0 +1,4 @@
+streamlit>=1.44
+gspread>=6.2.1
+google-auth>=2.35
+reportlab>=4.2

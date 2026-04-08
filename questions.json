@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Nursing research is a systematic investigation designed to produce generalizable knowledge applicable beyond a single clinical setting.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  },
+  {
+    "question": "Evidence-based practice (EBP) integrates the best available evidence, clinical expertise, and patient preferences to guide nursing care.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  },
+  {
+    "question": "The main goal of quality improvement (QI) is to create new theories and test ideas.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "False"
+  },
+  {
+    "question": "Randomized controlled trials generally provide a higher level of evidence than expert opinion.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  },
+  {
+    "question": "Quality improvement projects always need Institutional Review Board (IRB) approval before starting.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "False"
+  },
+  {
+    "question": "Quantitative research focuses on numerical data and statistical analysis to uncover patterns, identify relationships, or test interventions.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  },
+  {
+    "question": "Evidence-based practice (EBP) is different from research because it uses current evidence instead of creating new knowledge.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  },
+  {
+    "question": "A review of the literature is an essential component of nursing research, evidence-based practice (EBP), and quality improvement (QI) initiatives.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  },
+  {
+    "question": "Statistical significance alone determines whether research findings are clinically meaningful for nursing practice.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "False"
+  },
+  {
+    "question": "Nurses at every practice level help identify issues for research, evidence-based practice, or quality improvement.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": "True"
+  }
+]
