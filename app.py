@@ -2,7 +2,7 @@ import os, io, csv, json, uuid, textwrap
 from datetime import datetime
 
 import streamlit as st
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import landscape, letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
@@ -142,8 +142,8 @@ def wrap_centered(c, text, y, font_name="Helvetica", font_size=12, max_width=440
 
 def make_certificate_pdf(full_name: str, email: str, score_pct: float, cert_id: str) -> bytes:
     buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+    c = canvas.Canvas(buffer, pagesize=landscape(letter))
+    width, height = landscape(letter)
 
     bg_path = "assets/cert_bg.png"
 
