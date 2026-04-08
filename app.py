@@ -370,7 +370,7 @@ if st.session_state.get("participant_ok"):
         if passed:
             st.success(f"Your score: {correct}/{total} ({score_pct:.0f}%). You passed.")
         else:
-            st.error(f"Your score: {correct}/{total} ({score_pct:.0f}%). Passing score is {PASSING_SCORE}%.")
+            st.error(f"❗ You did not meet the passing score.\n\nYour score: {correct}/{total} ({score_pct:.0f}%). Minimum required: {PASSING_SCORE}%.")
 
         cert_id = str(uuid.uuid4())
 
@@ -437,7 +437,7 @@ if st.session_state.get("participant_ok"):
             st.code(traceback.format_exc())
 
         if not passed:
-            st.info(f"❗You did not meet the passing score.\n\nYour score: {correct}/{total} ({score_pct:.0f}%). Minimum required: {PASSING_SCORE}%. "Please re-take the post-test until you get passing score. Certificate is only generated for participants who achieve the passing score.")
+            st.info(f"❗You did not meet the passing score.\n\nYour score: {correct}/{total} ({score_pct:.0f}%). Minimum required: {PASSING_SCORE}%. Please re-take the post-test until you get passing score. Certificate is only generated for participants who achieve the passing score.")
             st.stop()
 
         try:
