@@ -441,7 +441,7 @@ if st.session_state.get("participant_ok"):
                 f"❗ You did not meet the passing score.\n\n"
                 f"Your score: {correct}/{total} ({score_pct:.0f}%). "
                 f"Minimum required: {PASSING_SCORE}%. "
-                f"Please re-take the post-test until you get a passing score. "
+                f"Please retake the post-test until you achieve a passing score. "
                 f"Certificate is only generated for participants who achieve the passing score."
             )
             st.stop()
