@@ -1,4 +1,10 @@
-import os, io, csv, json, uuid, textwrap
+import os
+import io
+import csv
+import json
+import uuid
+import traceback
+from pathlib import Path
 from datetime import datetime
 
 import streamlit as st
@@ -21,8 +27,11 @@ st.set_page_config(
     layout="centered"
 )
 
-if os.path.exists("logo.png"):
-    st.image("logo.png", width=220)
+BASE_DIR = Path(__file__).parent
+
+logo_path = BASE_DIR / "logo.png"
+if logo_path.exists():
+    st.image(str(logo_path), width=220)
 
 # =========================
 # Settings (from secrets)
@@ -37,44 +46,51 @@ COURSE_DATE = COURSE.get("course_date", "April 18, 2026")
 COURSE_TIME = COURSE.get("course_time", "8:00 am – 12:35 pm")
 CREDIT_HOURS = float(COURSE.get("credit_hours", 4.5))
 PASSING_SCORE = int(COURSE.get("passing_score", 75))
-PROVIDER_LINE = COURSE.get(
-    "provider_line",
-    "The Philippine Nurses Association of America Foundation is approved by the California Board of Registered Nursing, Provider 14143, for 4.5 contact hours"
-)
-PROGRAM_DIRECTOR = COURSE.get("program_director", "Peter-Reuben Calixto")
-PROGRAM_DIRECTOR_TITLE = COURSE.get("program_director_title", "PNAAF Accredited Provider Program Director")
 
 SHEETS = st.secrets.get("sheets", {})
 SHEET_ID = SHEETS.get("sheet_id", "")
 EVAL_TAB = SHEETS.get("eval_tab", "Spring2026_Eval_PT")
 CERT_TAB = SHEETS.get("cert_tab", "Spring2026_Certificates")
 
-SAVE_DIR = "data"
-os.makedirs(SAVE_DIR, exist_ok=True)
+SAVE_DIR = BASE_DIR / "data"
+SAVE_DIR.mkdir(exist_ok=True)
 
 # =========================
 # Load quiz
 # =========================
-with open("questions.json", "r", encoding="utf-8") as f:
+questions_path = BASE_DIR / "questions.json"
+with open(questions_path, "r", encoding="utf-8") as f:
     QUIZ = json.load(f)
 
 # =========================
 # Google Sheets helpers
 # =========================
 GSPREAD_CLIENT = None
-if "gcp_service_account" in st.secrets and SHEET_ID:
-    SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-    GS_CREDS = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SHEETS_SCOPES,
-    )
-    GSPREAD_CLIENT = gspread.authorize(GS_CREDS)
+GOOGLE_AUTH_ERROR = None
+
+try:
+    if "gcp_service_account" in st.secrets and SHEET_ID:
+        SHEETS_SCOPES = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        GS_CREDS = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=SHEETS_SCOPES,
+        )
+        GSPREAD_CLIENT = gspread.authorize(GS_CREDS)
+except Exception:
+    GOOGLE_AUTH_ERROR = traceback.format_exc()
+
 
 def sheets_append_dict(sheet_id: str, tab_name: str, row_dict: dict):
     if GSPREAD_CLIENT is None:
-        raise RuntimeError("Google Sheets is not configured. Add sheet_id and gcp_service_account to secrets.")
+        raise RuntimeError(
+            "Google Sheets is not configured. Check sheet_id, service account secrets, and sheet sharing."
+        )
 
     sh = GSPREAD_CLIENT.open_by_key(sheet_id)
+
     try:
         ws = sh.worksheet(tab_name)
     except gspread.WorksheetNotFound:
@@ -84,8 +100,8 @@ def sheets_append_dict(sheet_id: str, tab_name: str, row_dict: dict):
 
     header = ws.row_values(1) or []
     header_set = set(h.strip() for h in header)
-    new_cols = [k for k in row_dict.keys() if k not in header_set]
 
+    new_cols = [k for k in row_dict.keys() if k not in header_set]
     if new_cols:
         header_extended = header + new_cols
         ws.resize(rows=ws.row_count, cols=len(header_extended))
@@ -95,6 +111,7 @@ def sheets_append_dict(sheet_id: str, tab_name: str, row_dict: dict):
     row_vals = [row_dict.get(col, "") for col in header]
     ws.append_row(row_vals, value_input_option="USER_ENTERED")
 
+
 def save_eval_to_sheets(row_enriched: dict):
     row_enriched = dict(row_enriched)
     row_enriched["topics_interest"] = (row_enriched.get("topics_interest") or "").replace("\n", " ")
@@ -103,53 +120,35 @@ def save_eval_to_sheets(row_enriched: dict):
     row_enriched["payload_json"] = json.dumps(row_enriched, ensure_ascii=False)
     sheets_append_dict(SHEET_ID, EVAL_TAB, row_enriched)
 
+
 def save_cert_to_sheets(cert_row: dict):
     cert_row = dict(cert_row)
     cert_row.setdefault("created_at", datetime.now().isoformat(timespec="seconds"))
     sheets_append_dict(SHEET_ID, CERT_TAB, cert_row)
 
-def save_row_to_csv(path: str, row: dict):
-    new = not os.path.exists(path)
+
+def save_row_to_csv(path: Path, row: dict):
+    new = not path.exists()
     with open(path, "a", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=row.keys())
         if new:
             w.writeheader()
         w.writerow(row)
 
+
 # =========================
 # Certificate helper
 # =========================
-def wrap_centered(c, text, y, font_name="Helvetica", font_size=12, max_width=440, line_gap=16):
-    words = text.split()
-    lines = []
-    current = ""
-    for word in words:
-        candidate = f"{current} {word}".strip()
-        if stringWidth(candidate, font_name, font_size) <= max_width:
-            current = candidate
-        else:
-            if current:
-                lines.append(current)
-            current = word
-    if current:
-        lines.append(current)
-
-    c.setFont(font_name, font_size)
-    for line in lines:
-        c.drawCentredString(306, y, line)
-        y -= line_gap
-    return y
-
 def make_certificate_pdf(full_name: str, email: str, score_pct: float, cert_id: str) -> bytes:
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=landscape(letter))
     width, height = landscape(letter)
 
-    bg_path = "assets/cert_bg.png"
+    bg_path = BASE_DIR / "assets" / "cert_bg.png"
 
-    if os.path.exists(bg_path):
+    if bg_path.exists():
         c.drawImage(
-            ImageReader(bg_path),
+            ImageReader(str(bg_path)),
             0,
             0,
             width=width,
@@ -158,11 +157,11 @@ def make_certificate_pdf(full_name: str, email: str, score_pct: float, cert_id: 
             mask="auto",
         )
     else:
-        raise FileNotFoundError("Certificate background image not found at assets/cert_bg.png")
+        raise FileNotFoundError(f"Certificate background image not found: {bg_path}")
 
     name_x = width / 2
-    name_y = 330
-    max_name_width = 400
+    name_y = 300
+    max_name_width = 420
 
     font_name = "Helvetica-Bold"
     font_size = 24
@@ -177,7 +176,8 @@ def make_certificate_pdf(full_name: str, email: str, score_pct: float, cert_id: 
     c.showPage()
     c.save()
     return buffer.getvalue()
-    
+
+
 # =========================
 # UI
 # =========================
@@ -190,6 +190,89 @@ st.caption(
 
 st.markdown(f"**Conference Title:** {COURSE_TITLE}")
 st.markdown(f"**Date:** {COURSE_DATE} ({COURSE_TIME})")
+
+# =========================
+# Debug Section
+# =========================
+with st.expander("Google Sheets Debug", expanded=False):
+    st.write("SHEET_ID:", SHEET_ID if SHEET_ID else "Missing")
+    st.write("Eval tab:", EVAL_TAB)
+    st.write("Certificate tab:", CERT_TAB)
+
+    if "gcp_service_account" in st.secrets:
+        st.write(
+            "Service account email:",
+            st.secrets["gcp_service_account"].get("client_email", "Missing client_email")
+        )
+    else:
+        st.write("gcp_service_account block not found in secrets")
+
+    st.write("Google client ready:", GSPREAD_CLIENT is not None)
+
+    cert_bg_path = BASE_DIR / "assets" / "cert_bg.png"
+    st.write("Certificate background path:", str(cert_bg_path))
+    st.write("Certificate background exists:", cert_bg_path.exists())
+
+    if GOOGLE_AUTH_ERROR:
+        st.error("Google authentication error detected")
+        st.code(GOOGLE_AUTH_ERROR)
+
+    if st.button("Test Google Sheets Connection"):
+        try:
+            sh = GSPREAD_CLIENT.open_by_key(SHEET_ID)
+            st.success(f"Connected to spreadsheet: {sh.title}")
+            ws = sh.worksheet(EVAL_TAB)
+            st.success(f"Found worksheet: {ws.title}")
+        except Exception:
+            st.error("Google Sheets connection test failed")
+            st.code(traceback.format_exc())
+
+    if st.button("Append Test Row"):
+        try:
+            test_row = {
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "conference_title": COURSE_TITLE,
+                "conference_date": COURSE_DATE,
+                "full_name": "Test User",
+                "email": "test@example.com",
+                "credentials": "RN",
+                "profession": "Nurse",
+                "state_or_country": "NJ",
+                "pnany_member": "Yes",
+                "pnaa_member": "No",
+                "pnaa_chapter": "",
+                "first_time_attending": "No",
+                "attendance_confirmed": "Yes",
+                "overall_well_organized": "Strongly Agree",
+                "overall_consistent_with_flyer": "Strongly Agree",
+                "overall_relevant_to_learning_outcomes": "Strongly Agree",
+                "overall_effective_virtual_methods": "Strongly Agree",
+                "overall_met_personal_objectives": "Strongly Agree",
+                "improve_knowledge": "Yes",
+                "improve_skills": "Yes",
+                "improve_competence": "Yes",
+                "improve_performance": "Yes",
+                "improve_patient_outcomes": "Yes",
+                "practice_change_selected": "",
+                "practice_change_other": "",
+                "fair_balanced": "Yes",
+                "commercial_support": "No",
+                "commercial_bias": "N/A",
+                "bias_explain": "",
+                "most_beneficial_topic": "Test",
+                "topics_interest": "Test",
+                "additional_comments": "Test row",
+                "quiz_score": 10,
+                "quiz_total": 10,
+                "quiz_pct": "100",
+                "quiz_passed": "Yes",
+                "cert_id": str(uuid.uuid4()),
+            }
+            save_eval_to_sheets(test_row)
+            st.success("Test row appended successfully.")
+        except Exception:
+            st.error("Test append failed")
+            st.code(traceback.format_exc())
 
 # ---- Participant info ----
 with st.form("info"):
@@ -265,7 +348,7 @@ if st.session_state.get("participant_ok"):
     speaker_ratings = {}
     for idx, speaker in enumerate(speakers, start=1):
         st.markdown(f"**Speaker {idx}: {speaker}**")
-        a, b, c = st.columns(3)
+        a, b, c3 = st.columns(3)
         with a:
             speaker_ratings[f"speaker_{idx}_effectiveness"] = st.selectbox(
                 "Speaker’s Effectiveness", speaker_rating_options, key=f"speaker_{idx}_effectiveness"
@@ -274,17 +357,37 @@ if st.session_state.get("participant_ok"):
             speaker_ratings[f"speaker_{idx}_expertise"] = st.selectbox(
                 "Speaker’s Level of Expertise", speaker_rating_options, key=f"speaker_{idx}_expertise"
             )
-        with c:
+        with c3:
             speaker_ratings[f"speaker_{idx}_teaching_methods"] = st.selectbox(
                 "Effectiveness of Teaching Methods", speaker_rating_options, key=f"speaker_{idx}_teaching_methods"
             )
         st.divider()
 
-    overall_well_organized = st.select_slider("It was well organized", options=overall_rating_options, value="Strongly Agree")
-    overall_consistent = st.select_slider("It was consistent with the flyer advertising the event.", options=overall_rating_options, value="Strongly Agree")
-    overall_relevant = st.select_slider("It was relevant to the learning outcomes of the presentation.", options=overall_rating_options, value="Strongly Agree")
-    overall_virtual = st.select_slider("It effectively used virtual teaching methods.", options=overall_rating_options, value="Strongly Agree")
-    overall_objectives = st.select_slider("It enabled me to meet my personal objectives.", options=overall_rating_options, value="Strongly Agree")
+    overall_well_organized = st.select_slider(
+        "It was well organized",
+        options=overall_rating_options,
+        value="Strongly Agree"
+    )
+    overall_consistent = st.select_slider(
+        "It was consistent with the flyer advertising the event.",
+        options=overall_rating_options,
+        value="Strongly Agree"
+    )
+    overall_relevant = st.select_slider(
+        "It was relevant to the learning outcomes of the presentation.",
+        options=overall_rating_options,
+        value="Strongly Agree"
+    )
+    overall_virtual = st.select_slider(
+        "It effectively used virtual teaching methods.",
+        options=overall_rating_options,
+        value="Strongly Agree"
+    )
+    overall_objectives = st.select_slider(
+        "It enabled me to meet my personal objectives.",
+        options=overall_rating_options,
+        value="Strongly Agree"
+    )
 
     st.markdown("**This activity will assist in the improvement of my (check all that apply):**")
     improve_knowledge = st.checkbox("Knowledge")
@@ -307,16 +410,28 @@ if st.session_state.get("participant_ok"):
     for item in practice_choices:
         if st.checkbox(item, key=f"pc_{item}"):
             selected_practice_changes.append(item)
+
     practice_change_other = st.text_input("Other")
 
-    fair_balanced = st.radio("Do you feel this content was fair and balanced?", ["Yes", "No"], index=0, horizontal=True)
-    commercial_support = st.radio("Did this presentation have any commercial support?", ["Yes", "No"], index=1, horizontal=True)
+    fair_balanced = st.radio(
+        "Do you feel this content was fair and balanced?",
+        ["Yes", "No"],
+        index=0,
+        horizontal=True,
+    )
+    commercial_support = st.radio(
+        "Did this presentation have any commercial support?",
+        ["Yes", "No"],
+        index=1,
+        horizontal=True,
+    )
     commercial_bias = st.radio(
         "If yes, did the speaker demonstrate any commercial bias?",
         ["N/A", "Yes", "No"],
         index=0,
         horizontal=True,
     )
+
     bias_explain = st.text_input("If yes, explain")
     most_beneficial_topic = st.text_area("Which program topic was most beneficial to you?")
     topics_interest = st.text_area("What topics of interest would you like us to provide?")
@@ -392,19 +507,25 @@ if st.session_state.get("participant_ok"):
         for i, q in enumerate(QUIZ, start=1):
             row[f"post_test_q{i}"] = answers[str(i)]
 
-        save_row_to_csv(os.path.join(SAVE_DIR, "submissions.csv"), row)
+        save_row_to_csv(SAVE_DIR / "submissions.csv", row)
 
         try:
             save_eval_to_sheets(row)
             st.success("Saved to Google Sheets.")
-        except Exception as e:
-            st.warning(f"Could not save to Google Sheets: {e}")
+        except Exception:
+            st.error("Could not save to Google Sheets.")
+            st.code(traceback.format_exc())
 
         if not passed:
             st.info("Certificate is only generated for participants who achieve the passing score.")
             st.stop()
 
-        pdf_bytes = make_certificate_pdf(full_name, email, score_pct, cert_id)
+        try:
+            pdf_bytes = make_certificate_pdf(full_name, email, score_pct, cert_id)
+        except Exception:
+            st.error("Could not generate certificate PDF.")
+            st.code(traceback.format_exc())
+            st.stop()
 
         cert_row = {
             "cert_id": cert_id,
@@ -415,10 +536,12 @@ if st.session_state.get("participant_ok"):
             "credit_hours": CREDIT_HOURS,
             "score_pct": f"{score_pct:.0f}",
         }
+
         try:
             save_cert_to_sheets(cert_row)
-        except Exception as e:
-            st.warning(f"Could not log certificate to Google Sheets: {e}")
+        except Exception:
+            st.error("Could not log certificate to Google Sheets.")
+            st.code(traceback.format_exc())
 
         st.success("Congratulations! Your certificate is ready.")
         st.download_button(
