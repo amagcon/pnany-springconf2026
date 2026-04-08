@@ -1,4 +1,3 @@
-
 import os, io, csv, json, uuid, textwrap
 from datetime import datetime
 
@@ -221,15 +220,22 @@ st.markdown(f"**Date:** {COURSE_DATE} ({COURSE_TIME})")
 # ---- Participant info ----
 with st.form("info"):
     c1, c2 = st.columns(2)
+
     with c1:
         full_name = st.text_input("Full Name *")
         credentials = st.text_input("Credentials (e.g., RN, BSN, CCRN, and others)")
         profession = st.text_input("Profession")
         state_or_country = st.text_input("State or Country")
+
     with c2:
         email = st.text_input("Email Address *")
         pnany_member = st.radio("PNANY Member", ["Yes", "No"], horizontal=True)
-        pnaa_national_member = st.radio("PNAA Member", ["Yes", "No"], horizontal=True)
+        pnaa_member = st.radio("PNAA Member", ["Yes", "No"], horizontal=True)
+
+        pnaa_chapter = ""
+        if pnaa_member == "Yes":
+            pnaa_chapter = st.text_input("If yes, indicate PNAA Chapter")
+
         first_time_attending = st.radio(
             "Is this your first time attending a PNA-NY educational conference?",
             ["Yes", "No"],
@@ -244,6 +250,8 @@ with st.form("info"):
 if cont:
     if not full_name or not email or not attendance:
         st.error("Please complete Full Name, Email Address, and confirm attendance.")
+    elif pnaa_member == "Yes" and not pnaa_chapter.strip():
+        st.error("Please indicate your PNAA Chapter.")
     else:
         st.session_state["participant_ok"] = True
         st.success("Thanks. Continue below.")
@@ -367,7 +375,8 @@ if st.session_state.get("participant_ok"):
             "profession": profession,
             "state_or_country": state_or_country,
             "pnany_member": pnany_member,
-            "pnaa_national_officer": pnaa_national_officer,
+            "pnaa_member": pnaa_member,
+            "pnaa_chapter": pnaa_chapter,
             "first_time_attending": first_time_attending,
             "attendance_confirmed": "Yes" if attendance else "No",
 
