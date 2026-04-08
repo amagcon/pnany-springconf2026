@@ -185,6 +185,7 @@ st.title("PNA-NY Spring Conference 2026 — Evaluation & Post-Test")
 st.caption(
     "Complete the attendance form, post-test, and evaluation. "
     "On passing (≥ 75%), your certificate will be generated. "
+    "Please re-take the post-test until you get passing score."
     "Please make sure your name is spelled correctly, as this will be used for your certificate."
 )
 
