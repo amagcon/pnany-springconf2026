@@ -205,7 +205,7 @@ with st.form("info"):
 
     with c2:
         email = st.text_input("Email Address *")
-        pnany_member = st.radio("PNANY Member", ["Yes", "No"], horizontal=True)
+        pnany_member = st.radio("PNANY Member Status", ["Active Member", "Student", "Retiree", "Nn-membero"], horizontal=True)
         pnaa_member = st.radio("PNAA Member", ["Yes", "No"], horizontal=True)
 
         pnaa_chapter = ""
